@@ -1,47 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Neurovision AI — MRI Anatomical Brain</title>
+
+<title>Neurovision AI</title>
 
 <style>
 
 body{
-    background-color:black;
-    color:white;
-    font-family:Arial;
-    text-align:center;
-    padding-top:40px;
+background:black;
+color:white;
+text-align:center;
+font-family:Arial;
 }
 
 button{
-    padding:12px 20px;
-    font-size:16px;
-    border:none;
-    border-radius:8px;
-    background-color:#444;
-    color:white;
-    cursor:pointer;
+padding:12px;
+font-size:18px;
+margin-top:10px;
 }
 
-button:hover{
-    background-color:#666;
-}
-
-#brainImg{
-    margin-top:25px;
-    max-width:600px;
-    border-radius:10px;
-}
-
-#status{
-    margin-top:15px;
-    color:#aaa;
+img{
+margin-top:20px;
+max-width:80%;
 }
 
 #error{
-    color:red;
-    margin-top:15px;
+color:red;
+margin-top:10px;
 }
 
 </style>
@@ -52,72 +37,54 @@ button:hover{
 
 <h1>Neurovision AI — MRI Anatomical Brain</h1>
 
+<input type="file" id="file">
+
 <br>
 
-<input type="file" id="fileInput">
-
-<br><br>
-
-<button onclick="analyzeMRI()">Analyze MRI</button>
-
-<div id="status"></div>
+<button onclick="analyze()">Analyze MRI</button>
 
 <div id="error"></div>
 
-<img id="brainImg">
+<img id="brain">
+
 
 <script>
 
-async function analyzeMRI(){
+async function analyze(){
 
-    const fileInput = document.getElementById("fileInput");
+let fileInput = document.getElementById("file");
 
-    if(fileInput.files.length === 0){
-        alert("Please select image first");
-        return;
-    }
+if(fileInput.files.length === 0){
 
-    document.getElementById("status").innerText="Analyzing...";
-    document.getElementById("error").innerText="";
-    document.getElementById("brainImg").src="";
+alert("Select image");
 
-    const formData = new FormData();
+return;
 
-    formData.append("image", fileInput.files[0]);
+}
 
-    try{
+let form = new FormData();
 
-        const response = await fetch("/analyze",{
+form.append("image", fileInput.files[0]);
 
-            method:"POST",
-            body:formData
+let res = await fetch("/analyze",{
 
-        });
+method:"POST",
 
-        const data = await response.json();
+body:form
 
-        if(data.success){
+});
 
-            document.getElementById("status").innerText="Analysis complete";
+let data = await res.json();
 
-            document.getElementById("brainImg").src =
-                data.brain_image + "?t=" + new Date().getTime();
+if(!data.success){
 
-        }
-        else{
+document.getElementById("error").innerText = data.error;
 
-            document.getElementById("status").innerText="";
-            document.getElementById("error").innerText=data.error;
+return;
 
-        }
+}
 
-    }
-    catch(err){
-
-        document.getElementById("status").innerText="";
-        document.getElementById("error").innerText=err;
-
-    }
+document.getElementById("brain").src = data.brain_image;
 
 }
 
