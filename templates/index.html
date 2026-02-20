@@ -1,49 +1,92 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Neurovision AI — MRI Anatomical Brain</title>
+
+<title>Neurovision AI — MRI Anatomical Brain</title>
+
+<style>
+
+body {
+
+background-color: black;
+color: white;
+font-family: Arial;
+text-align: center;
+
+}
+
+button {
+
+padding: 10px;
+margin-top: 10px;
+font-size: 16px;
+
+}
+
+img {
+
+margin-top: 20px;
+border: 2px solid white;
+
+}
+
+</style>
+
 </head>
-<body style="background:black; color:white; font-family:Arial; text-align:center;">
+
+<body>
 
 <h1>Neurovision AI — MRI Anatomical Brain</h1>
 
 <input type="file" id="fileInput">
-<button onclick="upload()">Analyze</button>
 
-<br><br>
+<br>
 
-<img id="preview" width="400">
-<img id="heatmap" width="400">
+<button onclick="uploadImage()">Analyze MRI</button>
 
-<pre id="result"></pre>
+<br>
+
+<img id="resultImage" width="512">
+
 
 <script>
 
-function upload(){
+async function uploadImage() {
 
-    const file = document.getElementById("fileInput").files[0]
+const file = document.getElementById("fileInput").files[0]
 
-    const formData = new FormData()
-    formData.append("image", file)
+if (!file) {
 
-    fetch("/analyze", {
-        method:"POST",
-        body:formData
-    })
-    .then(res => res.json())
-    .then(data => {
-
-        document.getElementById("result").innerText =
-            JSON.stringify(data.activations, null, 2)
-
-        if(data.heatmap){
-            document.getElementById("heatmap").src = data.heatmap
-        }
-
-    })
+alert("Select MRI image first")
+return
 
 }
+
+const formData = new FormData()
+
+formData.append("image", file)
+
+const response = await fetch("/analyze", {
+
+method: "POST",
+body: formData
+
+})
+
+const data = await response.json()
+
+if (data.error) {
+
+alert(data.error)
+return
+
+}
+
+document.getElementById("resultImage").src =
+data.overlay_image + "?t=" + new Date().getTime()
+
+}
+
 </script>
 
 </body>
