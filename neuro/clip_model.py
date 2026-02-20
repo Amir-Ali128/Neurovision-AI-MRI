@@ -1,12 +1,37 @@
-
-import torch, clip
+import torch
+import clip
 from PIL import Image
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model, preprocess = clip.load("ViT-B/32", device=device)
+device = "cpu"
+
+# Lazy load variables
+model = None
+preprocess = None
+
+
+def load_model():
+
+    global model, preprocess
+
+    if model is None:
+
+        print("Loading CLIP model...")
+
+        model, preprocess = clip.load("ViT-B/32", device=device)
+
+        model.eval()
+
+    return model, preprocess
+
 
 def encode_image(path):
-    img = preprocess(Image.open(path)).unsqueeze(0).to(device)
+
+    model, preprocess = load_model()
+
+    image = preprocess(Image.open(path)).unsqueeze(0).to(device)
+
     with torch.no_grad():
-        emb = model.encode_image(img)
-    return emb.cpu().numpy().tolist()
+
+        embedding = model.encode_image(image)
+
+    return embedding.cpu().numpy().tolist()
