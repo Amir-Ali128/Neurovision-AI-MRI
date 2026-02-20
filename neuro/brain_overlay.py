@@ -11,11 +11,14 @@ def overlay_on_brain(heatmap_path):
 
     brain = cv2.imread(BRAIN_TEMPLATE)
 
-    heatmap = cv2.imread(heatmap_path)
+    heatmap = cv2.imread(heatmap_path, cv2.IMREAD_GRAYSCALE)
 
     heatmap = cv2.resize(heatmap, (brain.shape[1], brain.shape[0]))
 
-    result = cv2.addWeighted(brain, 0.65, heatmap, 0.35, 0)
+    # neural activation renk haritası
+    heatmap_color = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+
+    result = cv2.addWeighted(brain, 0.7, heatmap_color, 0.5, 0)
 
     output_path = "static/result.png"
 
