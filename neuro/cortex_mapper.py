@@ -1,49 +1,42 @@
 # neuro/cortex_mapper.py
 
-# Anatomical coordinates for brain_template.png
-BRAIN_REGIONS = {
-    "Frontal_lobe": {
-        "coord": (250, 180),
-        "color": (255, 0, 0)
-    },
-    "Parietal_lobe": {
-        "coord": (320, 140),
-        "color": (0, 255, 0)
-    },
-    "Temporal_lobe": {
-        "coord": (280, 240),
-        "color": (0, 0, 255)
-    },
-    "Occipital_lobe": {
-        "coord": (380, 200),
-        "color": (255, 255, 0)
-    },
-    "Cerebellum": {
-        "coord": (400, 280),
-        "color": (255, 0, 255)
-    }
+# brain_template.png için anatomik koordinatlar
+# (bu koordinatlar lateral brain template'e göre ayarlanmıştır)
+
+BRAIN_COORDS = {
+
+    "frontal_lobe": (180, 140),
+
+    "parietal_lobe": (260, 120),
+
+    "temporal_lobe": (240, 240),
+
+    "occipital_lobe": (340, 160),
+
+    "cerebellum": (360, 260)
 }
 
 
 def map_to_brain_region(neuron_id):
 
+    # neuron id → gerçek anatomik lob
+
     if neuron_id < 150:
-        region = "Occipital_lobe"
+        return "occipital_lobe"
 
     elif neuron_id < 300:
-        region = "Temporal_lobe"
+        return "temporal_lobe"
 
     elif neuron_id < 450:
-        region = "Parietal_lobe"
+        return "parietal_lobe"
 
     elif neuron_id < 600:
-        region = "Frontal_lobe"
+        return "frontal_lobe"
 
     else:
-        region = "Cerebellum"
+        return "cerebellum"
 
-    return {
-        "region": region,
-        "coord": BRAIN_REGIONS[region]["coord"],
-        "color": BRAIN_REGIONS[region]["color"]
-    }
+
+def get_coordinates(region):
+
+    return BRAIN_COORDS.get(region, (260,180))
