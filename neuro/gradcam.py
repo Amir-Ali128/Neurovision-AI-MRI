@@ -1,49 +1,65 @@
-
-import torch, cv2, numpy as np
+import torch
+import cv2
+import numpy as np
 from ultralytics import YOLO
-from torchvision import transforms
-from PIL import Image
 
 class GradCAM:
-
     def __init__(self):
-        self.model = YOLO("yolov10n.pt")
+        self.model = YOLO("yolov8n.pt")
+        self.model.model.eval()
+
+        # gradient açık olacak
+        for param in self.model.model.parameters():
+            param.requires_grad = True
+
         self.activations = None
         self.gradients = None
-        self.register()
 
-    def f_hook(self, m,i,o): self.activations=o.detach()
-    def b_hook(self, m,gi,go): self.gradients=go[0].detach()
+        target_layer = self.model.model.model[-2]
 
-    def register(self):
-        for n,l in self.model.model.named_modules():
-            if isinstance(l, torch.nn.Conv2d):
-                l.register_forward_hook(self.f_hook)
-                l.register_backward_hook(self.b_hook)
-                break
+        target_layer.register_forward_hook(self.save_activation)
+        target_layer.register_backward_hook(self.save_gradient)
 
-    def generate(self,path):
-        img=Image.open(path).convert("RGB")
-        t=transforms.Compose([transforms.Resize((640,640)),transforms.ToTensor()])
-        x=t(img).unsqueeze(0)
-        x.requires_grad=True
+    def save_activation(self, module, input, output):
+        self.activations = output
 
-        out=self.model.model(x)
-        loss=out[0].sum()
+    def save_gradient(self, module, grad_input, grad_output):
+        self.gradients = grad_output[0]
+
+    def generate(self, image_path):
+
+        img = cv2.imread(image_path)
+        img_resized = cv2.resize(img, (640,640))
+        img_tensor = torch.from_numpy(img_resized).permute(2,0,1).float().unsqueeze(0)
+        img_tensor.requires_grad = True
+
+        results = self.model.model(img_tensor)
+
+        score = results[0].mean()
+
         self.model.model.zero_grad()
-        loss.backward()
+        score.backward()
 
-        grads=self.gradients[0]
-        acts=self.activations[0]
+        gradients = self.gradients[0].cpu().detach().numpy()
+        activations = self.activations[0].cpu().detach().numpy()
 
-        w=torch.mean(grads,dim=(1,2))
-        cam=torch.zeros(acts.shape[1:],dtype=torch.float32)
+        weights = np.mean(gradients, axis=(1,2))
 
-        for i,val in enumerate(w):
-            cam+=val*acts[i]
+        cam = np.zeros(activations.shape[1:], dtype=np.float32)
 
-        cam=torch.relu(cam).cpu().numpy()
-        cam=cv2.resize(cam,(640,640))
-        cam-=cam.min()
-        cam/=cam.max()
-        return (cam*255).astype(np.uint8).tolist()
+        for i, w in enumerate(weights):
+            cam += w * activations[i]
+
+        cam = np.maximum(cam, 0)
+        cam = cv2.resize(cam, (img.shape[1], img.shape[0]))
+        cam = cam - cam.min()
+        cam = cam / cam.max()
+
+        heatmap = cv2.applyColorMap(np.uint8(255 * cam), cv2.COLORMAP_JET)
+
+        overlay = heatmap * 0.4 + img * 0.6
+
+        output_path = image_path.replace(".jpg", "_gradcam.jpg")
+        cv2.imwrite(output_path, overlay)
+
+        return output_path
