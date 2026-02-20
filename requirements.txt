@@ -1,9 +1,13 @@
 flask
-torch
-torchvision
-ultralytics
-opencv-python-headless
+gunicorn
 numpy
 Pillow
-gunicorn
-git+https://github.com/openai/CLIP.git
+opencv-python-headless
+
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+torchaudio==2.2.2+cpu
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+ultralytics
