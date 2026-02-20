@@ -1,48 +1,47 @@
 import torch
 import cv2
 import numpy as np
+import clip
+from PIL import Image
 
 class GradCAM:
 
     def __init__(self):
 
-        from neuro.clip_model import model
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.model = model
+        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
 
         self.model.eval()
 
-        for param in self.model.parameters():
-            param.requires_grad = True
-
     def generate(self, image_path):
 
-        img = cv2.imread(image_path)
-        img = cv2.resize(img, (224,224))
+        image = self.preprocess(Image.open(image_path)).unsqueeze(0).to(self.device)
 
-        tensor = torch.tensor(img).permute(2,0,1).float().unsqueeze(0)
+        image.requires_grad = True
 
-        tensor.requires_grad = True
+        # sadece image encoder kullan
+        features = self.model.encode_image(image)
 
-        output = self.model(tensor)
-
-        loss = output.mean()
+        loss = features.mean()
 
         self.model.zero_grad()
 
         loss.backward()
 
-        grad = tensor.grad[0].permute(1,2,0).detach().numpy()
+        grad = image.grad.cpu().numpy()[0]
 
-        heatmap = np.mean(grad, axis=2)
+        heatmap = np.mean(grad, axis=0)
 
-        heatmap = np.maximum(heatmap,0)
+        heatmap = np.maximum(heatmap, 0)
 
         heatmap /= heatmap.max() + 1e-8
 
         heatmap = np.uint8(255 * heatmap)
 
         heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+
+        heatmap = cv2.resize(heatmap, (512,512))
 
         path = "static/heatmap.png"
 
