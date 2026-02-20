@@ -5,11 +5,16 @@ model = None
 
 def get_model():
     global model
+
     if model is None:
+        print("Loading YOLOv10n model...")
         model = YOLO("yolov10n.pt")
+
     return model
 
+
 def detect(image_path):
+
     model = get_model()
 
     results = model(image_path)
