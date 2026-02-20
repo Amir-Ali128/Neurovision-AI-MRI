@@ -6,53 +6,42 @@
 
 <style>
 
-body {
-    background: black;
-    color: white;
-    font-family: Arial;
-    text-align: center;
+body{
+    background-color:black;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+    padding-top:40px;
 }
 
-.container {
-    margin-top: 40px;
+button{
+    padding:12px 20px;
+    font-size:16px;
+    border:none;
+    border-radius:8px;
+    background-color:#444;
+    color:white;
+    cursor:pointer;
 }
 
-button {
-    padding: 12px 25px;
-    font-size: 18px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    background: white;
-    color: black;
+button:hover{
+    background-color:#666;
 }
 
-button:hover {
-    background: gray;
+#brainImg{
+    margin-top:25px;
+    max-width:600px;
+    border-radius:10px;
 }
 
-input {
-    margin: 20px;
+#status{
+    margin-top:15px;
+    color:#aaa;
 }
 
-#result {
-    margin-top: 30px;
-}
-
-#brainImage {
-    max-width: 90%;
-    border-radius: 10px;
-    margin-top: 20px;
-}
-
-#status {
-    margin-top: 15px;
-    color: gray;
-}
-
-#error {
-    color: red;
-    margin-top: 15px;
+#error{
+    color:red;
+    margin-top:15px;
 }
 
 </style>
@@ -61,13 +50,13 @@ input {
 
 <body>
 
-<div class="container">
-
 <h1>Neurovision AI — MRI Anatomical Brain</h1>
+
+<br>
 
 <input type="file" id="fileInput">
 
-<br>
+<br><br>
 
 <button onclick="analyzeMRI()">Analyze MRI</button>
 
@@ -75,68 +64,58 @@ input {
 
 <div id="error"></div>
 
-<div id="result">
-
-<h2 id="resultTitle" style="display:none;">
-Brain Neural Activation Map
-</h2>
-
-<img id="brainImage" style="display:none;">
-
-</div>
-
-</div>
+<img id="brainImg">
 
 <script>
 
-async function analyzeMRI() {
+async function analyzeMRI(){
 
     const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
 
-    if (!file) {
-        alert("Select MRI image first");
+    if(fileInput.files.length === 0){
+        alert("Please select image first");
         return;
     }
 
-    document.getElementById("status").innerText = "Analyzing brain...";
-    document.getElementById("error").innerText = "";
-    document.getElementById("brainImage").style.display = "none";
+    document.getElementById("status").innerText="Analyzing...";
+    document.getElementById("error").innerText="";
+    document.getElementById("brainImg").src="";
 
     const formData = new FormData();
-    formData.append("image", file);
 
-    try {
+    formData.append("image", fileInput.files[0]);
 
-        const response = await fetch("/analyze", {
-            method: "POST",
-            body: formData
+    try{
+
+        const response = await fetch("/analyze",{
+
+            method:"POST",
+            body:formData
+
         });
 
         const data = await response.json();
 
-        if (!data.success) {
+        if(data.success){
 
-            document.getElementById("status").innerText = "";
-            document.getElementById("error").innerText = data.error;
-            return;
+            document.getElementById("status").innerText="Analysis complete";
+
+            document.getElementById("brainImg").src =
+                data.brain_image + "?t=" + new Date().getTime();
+
+        }
+        else{
+
+            document.getElementById("status").innerText="";
+            document.getElementById("error").innerText=data.error;
+
         }
 
-        document.getElementById("status").innerText = "Analysis complete";
-
-        const img = document.getElementById("brainImage");
-
-        img.src = data.brain_image + "?t=" + new Date().getTime();
-
-        img.style.display = "block";
-
-        document.getElementById("resultTitle").style.display = "block";
-
     }
-    catch (err) {
+    catch(err){
 
-        document.getElementById("status").innerText = "";
-        document.getElementById("error").innerText = err;
+        document.getElementById("status").innerText="";
+        document.getElementById("error").innerText=err;
 
     }
 
