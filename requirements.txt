@@ -1,0 +1,9 @@
+flask
+torch
+torchvision
+ultralytics
+opencv-python
+numpy
+Pillow
+transformers
+clip-by-openai
