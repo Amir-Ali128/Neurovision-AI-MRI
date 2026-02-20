@@ -6,4 +6,4 @@ ultralytics
 opencv-python-headless
 pillow
 numpy
-clip @ git+https://github.com/openai/CLIP.git
+
