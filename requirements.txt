@@ -7,11 +7,4 @@ numpy==1.26.4
 opencv-python-headless==4.9.0.80
 Pillow==10.2.0
 
-
 ultralytics==8.1.34
-
-transformers==4.38.2
-tokenizers==0.15.2
-huggingface-hub==0.20.3
-
-clip-by-openai==1.0
