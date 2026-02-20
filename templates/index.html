@@ -1,89 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-
-<title>Neurovision AI — MRI Anatomical Brain</title>
-
-<style>
-
-body {
-
-background-color: black;
-color: white;
-font-family: Arial;
-text-align: center;
-
-}
-
-button {
-
-padding: 10px;
-margin-top: 10px;
-font-size: 16px;
-
-}
-
-img {
-
-margin-top: 20px;
-border: 2px solid white;
-
-}
-
-</style>
-
+<title>Neurovision AI</title>
 </head>
-
-<body>
+<body style="background:black;color:white;text-align:center;">
 
 <h1>Neurovision AI — MRI Anatomical Brain</h1>
 
-<input type="file" id="fileInput">
+<input type="file" id="imageInput">
 
-<br>
+<button onclick="analyze()">Analyze MRI</button>
 
-<button onclick="uploadImage()">Analyze MRI</button>
+<br><br>
 
-<br>
-
-<img id="resultImage" width="512">
-
+<img id="brainResult" width="400">
 
 <script>
 
-async function uploadImage() {
+async function analyze(){
 
-const file = document.getElementById("fileInput").files[0]
+    const file = document.getElementById("imageInput").files[0]
 
-if (!file) {
+    const form = new FormData()
 
-alert("Select MRI image first")
-return
+    form.append("image", file)
 
-}
+    const res = await fetch("/analyze", {
 
-const formData = new FormData()
+        method:"POST",
+        body:form
 
-formData.append("image", file)
+    })
 
-const response = await fetch("/analyze", {
+    const data = await res.json()
 
-method: "POST",
-body: formData
-
-})
-
-const data = await response.json()
-
-if (data.error) {
-
-alert(data.error)
-return
-
-}
-
-document.getElementById("resultImage").src =
-data.overlay_image + "?t=" + new Date().getTime()
+    document.getElementById("brainResult").src =
+        data.brain_map + "?t=" + new Date().getTime()
 
 }
 
