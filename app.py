@@ -93,7 +93,7 @@ def analyze():
 
             "activations": mapped,
 
-            "brain_image":  brain_result_path
+            "brain_image": "/" + brain_result_path
         })
 
 
