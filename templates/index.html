@@ -2,11 +2,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Neurovision AI MRI Brain</title>
+    <title>Neurovision AI — MRI Anatomical Brain</title>
 </head>
-<body style="background:black;color:white;text-align:center;">
+<body style="background:black; color:white; font-family:Arial; text-align:center;">
+
 <h1>Neurovision AI — MRI Anatomical Brain</h1>
-<input type="file" id="upload">
-<script type="module" src="/static/brain_viewer.js"></script>
+
+<input type="file" id="fileInput">
+<button onclick="upload()">Analyze</button>
+
+<br><br>
+
+<img id="preview" width="400">
+<img id="heatmap" width="400">
+
+<pre id="result"></pre>
+
+<script>
+
+function upload(){
+
+    const file = document.getElementById("fileInput").files[0]
+
+    const formData = new FormData()
+    formData.append("image", file)
+
+    fetch("/analyze", {
+        method:"POST",
+        body:formData
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        document.getElementById("result").innerText =
+            JSON.stringify(data.activations, null, 2)
+
+        if(data.heatmap){
+            document.getElementById("heatmap").src = data.heatmap
+        }
+
+    })
+
+}
+</script>
+
 </body>
 </html>
