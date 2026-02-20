@@ -1,14 +1,18 @@
-
 from ultralytics import YOLO
 
 model = None
 
+
 def get_model():
+
     global model
 
     if model is None:
-        print("Loading YOLOv10n model...")
-        model = YOLO("yolov10n.pt")
+
+        print("Loading YOLOv8n model...")
+
+        # ✅ en hafif model
+        model = YOLO("yolov8n.pt")
 
     return model
 
@@ -22,10 +26,18 @@ def detect(image_path):
     detections = []
 
     for r in results:
+
         for box in r.boxes:
+
             detections.append({
+
                 "class": model.names[int(box.cls)],
-                "confidence": float(box.conf)
+
+                "confidence": float(box.conf),
+
+                "x": float(box.xyxy[0][0]),
+                "y": float(box.xyxy[0][1]),
+
             })
 
     return detections, results
