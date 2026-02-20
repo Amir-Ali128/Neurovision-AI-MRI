@@ -1,27 +1,30 @@
 import cv2
-import numpy as np
-import os
+from neuro.cortex_mapper import get_coordinates
 
 BRAIN_TEMPLATE = "static/brain_template.png"
 
-def overlay_on_brain(heatmap_path):
-
-    if not os.path.exists(BRAIN_TEMPLATE):
-        raise Exception("brain_template.png not found in static folder")
+def overlay_on_brain(activations):
 
     brain = cv2.imread(BRAIN_TEMPLATE)
 
-    heatmap = cv2.imread(heatmap_path, cv2.IMREAD_GRAYSCALE)
+    for act in activations:
 
-    heatmap = cv2.resize(heatmap, (brain.shape[1], brain.shape[0]))
+        region = act["region"]
 
-    # neural activation renk haritası
-    heatmap_color = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+        x, y = get_coordinates(region)
 
-    result = cv2.addWeighted(brain, 0.7, heatmap_color, 0.5, 0)
+        strength = act["activation"]
 
-    output_path = "static/result.png"
+        radius = int(10 + strength * 30)
 
-    cv2.imwrite(output_path, result)
+        # kırmızı neural activation
+        cv2.circle(brain, (x,y), radius, (0,0,255), -1)
 
-    return output_path
+        # neural connection çizgisi
+        cv2.line(brain, (x,y), (x+radius,y-radius), (255,255,0), 2)
+
+    output = "static/result.png"
+
+    cv2.imwrite(output, brain)
+
+    return output
