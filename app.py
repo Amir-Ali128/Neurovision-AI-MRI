@@ -9,80 +9,81 @@ from neuro.gradcam import GradCAM
 from neuro.cortex_mapper import map_to_brain_region
 from neuro.brain_overlay import overlay_on_brain
 
-# Flask setup
 app = Flask(__name__)
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialize models once
+# Lazy load models
 extractor = ActivationExtractor()
 gradcam = GradCAM()
 
 
-# Homepage
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-# MRI Analysis Endpoint
 @app.route("/analyze", methods=["POST"])
 def analyze():
 
     try:
 
-        # 1️⃣ get uploaded image
+        if "image" not in request.files:
+            return jsonify({
+                "success": False,
+                "error": "No image uploaded"
+            })
+
         file = request.files["image"]
 
         if file.filename == "":
-            return jsonify({"error": "No file uploaded"})
+            return jsonify({
+                "success": False,
+                "error": "Empty filename"
+            })
 
         path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(path)
 
-        print("Image saved:", path)
+        print("Saved:", path)
 
-
-        # 2️⃣ YOLO detection
+        # YOLO detect
         detections, _ = detect(path)
         print("YOLO done")
 
-
-        # 3️⃣ CLIP embedding
+        # CLIP embedding
         embedding = encode_image(path)
         print("CLIP done")
 
-
-        # 4️⃣ Activation extraction
+        # Activation extraction
         activations = extractor.run(path)
-        print("Activation done")
 
+        if activations is None:
+            activations = []
 
-        # 5️⃣ GradCAM heatmap
+        print("Activation done:", len(activations))
+
+        # GradCAM
         heatmap_path = gradcam.generate(path)
-        print("GradCAM heatmap:", heatmap_path)
+        print("GradCAM:", heatmap_path)
 
-
-        # 6️⃣ Activation → brain region mapping
+        # Map neurons to brain regions
         mapped = []
 
         for a in activations:
 
             mapped.append({
-                "neuron": int(a["neuron"]),
-                "activation": float(a["activation"]),
-                "region": map_to_brain_region(a["neuron"])
+                "neuron": int(a.get("neuron", 0)),
+                "activation": float(a.get("activation", 0)),
+                "region": map_to_brain_region(a.get("neuron", 0))
             })
 
-
-        # 7️⃣ Anatomik beyin üzerine çiz
+        # Draw on anatomical brain
         brain_result_path = overlay_on_brain(mapped)
 
         print("Brain overlay:", brain_result_path)
 
-
-        # 8️⃣ response
         return jsonify({
 
             "success": True,
@@ -102,14 +103,11 @@ def analyze():
         print("ERROR:", str(e))
 
         return jsonify({
-
             "success": False,
-
             "error": str(e)
         })
 
 
-# Render production server
 if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 10000))
