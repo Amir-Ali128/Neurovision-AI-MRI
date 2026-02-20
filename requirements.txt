@@ -5,4 +5,5 @@ ultralytics
 opencv-python-headless
 numpy
 Pillow
+gunicorn
 git+https://github.com/openai/CLIP.git
