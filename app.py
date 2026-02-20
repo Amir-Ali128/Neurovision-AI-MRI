@@ -15,7 +15,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialize models once (IMPORTANT for Render performance)
+# Initialize models once
 extractor = ActivationExtractor()
 gradcam = GradCAM()
 
@@ -46,65 +46,65 @@ def analyze():
 
         # 2️⃣ YOLO detection
         detections, _ = detect(path)
-
         print("YOLO done")
 
 
         # 3️⃣ CLIP embedding
         embedding = encode_image(path)
-
         print("CLIP done")
 
 
         # 4️⃣ Activation extraction
         activations = extractor.run(path)
-
         print("Activation done")
 
-# GradCAM heatmap üret
-heatmap_path = gradcam.generate(path)
 
-print("GradCAM heatmap:", heatmap_path)
-
-
-# Activation → brain region mapping
-mapped = []
-
-for a in activations:
-
-    mapped.append({
-        "neuron": int(a["neuron"]),
-        "activation": float(a["activation"]),
-        "region": map_to_brain_region(a["neuron"])
-    })
+        # 5️⃣ GradCAM heatmap
+        heatmap_path = gradcam.generate(path)
+        print("GradCAM heatmap:", heatmap_path)
 
 
-# Anatomik beyin üzerine GERÇEK koordinat ile çiz
-brain_result_path = overlay_on_brain(mapped)
+        # 6️⃣ Activation → brain region mapping
+        mapped = []
 
-print("Brain overlay:", brain_result_path)
+        for a in activations:
+
+            mapped.append({
+                "neuron": int(a["neuron"]),
+                "activation": float(a["activation"]),
+                "region": map_to_brain_region(a["neuron"])
+            })
 
 
-# response
-return jsonify({
+        # 7️⃣ Anatomik beyin üzerine çiz
+        brain_result_path = overlay_on_brain(mapped)
 
-    "success": True,
+        print("Brain overlay:", brain_result_path)
 
-    "detections": detections,
 
-    "embedding": embedding,
+        # 8️⃣ response
+        return jsonify({
 
-    "activations": mapped,
+            "success": True,
 
-    "brain_image": "/" + brain_result_path
-})
+            "detections": detections,
+
+            "embedding": embedding,
+
+            "activations": mapped,
+
+            "brain_image": "/" + brain_result_path
+        })
+
 
     except Exception as e:
 
         print("ERROR:", str(e))
 
         return jsonify({
+
             "success": False,
+
             "error": str(e)
         })
 
