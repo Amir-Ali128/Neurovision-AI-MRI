@@ -1,20 +1,8 @@
-
-flask==3.0.0
-gunicorn==21.2.0
-
-# YOLO
-ultralytics==8.3.0
-
-# Torch CPU version (hafif ve stabil)
-torch==2.2.2
-torchvision==0.17.2
-
-# numpy wheel zorla (compile etmez)
-numpy==1.25.2
-
-# Image processing
-pillow==10.2.0
-opencv-python-headless==4.9.0.80
-
-# CLIP (senin proje için gerekliydi)
+flask
+torch
+torchvision
+ultralytics
+opencv-python-headless
+numpy
+Pillow
 git+https://github.com/openai/CLIP.git
