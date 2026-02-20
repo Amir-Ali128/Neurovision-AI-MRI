@@ -61,47 +61,43 @@ def analyze():
 
         print("Activation done")
 
+# GradCAM heatmap üret
+heatmap_path = gradcam.generate(path)
 
-        # 5️⃣ GradCAM heatmap oluştur
-        heatmap_path = gradcam.generate(path)
-
-        print("GradCAM heatmap:", heatmap_path)
-
-
-        # 6️⃣ Anatomik beyin üzerine çiz
-        brain_result_path = overlay_on_brain(heatmap_path)
-
-        print("Brain overlay:", brain_result_path)
+print("GradCAM heatmap:", heatmap_path)
 
 
-        # 7️⃣ Activation → brain region mapping
-        mapped = []
+# Activation → brain region mapping
+mapped = []
 
-        for a in activations:
+for a in activations:
 
-            mapped.append({
-                "neuron": int(a["neuron"]),
-                "activation": float(a["activation"]),
-                "region": map_to_brain_region(a["neuron"])
-            })
+    mapped.append({
+        "neuron": int(a["neuron"]),
+        "activation": float(a["activation"]),
+        "region": map_to_brain_region(a["neuron"])
+    })
 
 
-        # 8️⃣ response
-        return jsonify({
+# Anatomik beyin üzerine GERÇEK koordinat ile çiz
+brain_result_path = overlay_on_brain(mapped)
 
-            "success": True,
+print("Brain overlay:", brain_result_path)
 
-            "detections": detections,
 
-            "embedding": embedding,
+# response
+return jsonify({
 
-            "activations": mapped,
+    "success": True,
 
-            # frontend bunu gösterecek
-            "brain_image": "/" + brain_result_path
+    "detections": detections,
 
-        })
+    "embedding": embedding,
 
+    "activations": mapped,
+
+    "brain_image": "/" + brain_result_path
+})
 
     except Exception as e:
 
