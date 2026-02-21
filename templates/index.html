@@ -1,95 +1,93 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <meta charset="utf-8" />
-  <title>Neurovision AI</title>
-  <style>
-    body {
-      background: black;
-      color: white;
-      text-align: center;
-      font-family: Arial, sans-serif;
-      margin-top: 60px;
-    }
-    button {
-      padding: 10px 18px;
-      font-size: 16px;
-      cursor: pointer;
-      border-radius: 8px;
-      border: 0;
-    }
-    #status {
-      margin-top: 20px;
-      font-size: 16px;
-      color: #00ff9d;
-    }
-    #error {
-      margin-top: 12px;
-      font-size: 14px;
-      color: #ff4444;
-    }
-  </style>
+
+<title>Neurovision AI</title>
+
+<style>
+
+body{
+background:black;
+color:white;
+text-align:center;
+font-family:Arial;
+}
+
+button{
+padding:12px;
+font-size:18px;
+margin-top:10px;
+}
+
+img{
+margin-top:20px;
+max-width:80%;
+}
+
+</style>
+
 </head>
 
 <body>
 
-  <h2>Neurovision AI — MRI Anatomical Brain</h2>
+<h1>Neurovision AI — Anatomical Brain Visualization</h1>
 
-  <form id="uploadForm" enctype="multipart/form-data">
-    <input type="file" id="fileInput" name="file" accept="image/*" />
-    <br><br>
-    <button type="submit" id="analyzeBtn">Analyze</button>
-  </form>
+<form id="uploadForm">
 
-  <div id="status"></div>
-  <div id="error"></div>
+<input type="file" id="fileInput" name="file">
 
-  <script>
-    const form = document.getElementById("uploadForm");
-    const fileInput = document.getElementById("fileInput");
-    const statusEl = document.getElementById("status");
-    const errorEl = document.getElementById("error");
-    const btn = document.getElementById("analyzeBtn");
+<br><br>
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      statusEl.innerText = "";
-      errorEl.innerText = "";
+<button type="submit">Analyze</button>
 
-      if (fileInput.files.length === 0) {
-        errorEl.innerText = "No file selected";
-        return;
-      }
+</form>
 
-      const formData = new FormData();
-      formData.append("file", fileInput.files[0]);
+<p id="status"></p>
 
-      btn.disabled = true;
-      statusEl.innerText = "Analyzing...";
+<img id="result">
 
-      try {
-        const res = await fetch("/analyze", {
-          method: "POST",
-          body: formData
-        });
+<script>
 
-        const data = await res.json();
+document.getElementById("uploadForm").onsubmit = async function(e){
 
-        if (!res.ok) {
-          errorEl.innerText = data.message || "Server error";
-          statusEl.innerText = "";
-        } else {
-          statusEl.innerText = data.message + " | feature_norm=" + data.feature_norm;
-        }
+e.preventDefault()
 
-      } catch (err) {
-        errorEl.innerText = "Connection error";
-        statusEl.innerText = "";
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  </script>
+let file = document.getElementById("fileInput").files[0]
+
+if(!file){
+document.getElementById("status").innerText="Select image first"
+return
+}
+
+let formData = new FormData()
+
+formData.append("file", file)
+
+document.getElementById("status").innerText="Analyzing..."
+
+let response = await fetch("/analyze", {
+method:"POST",
+body:formData
+})
+
+if(!response.ok){
+document.getElementById("status").innerText="Server error"
+return
+}
+
+let blob = await response.blob()
+
+let url = URL.createObjectURL(blob)
+
+document.getElementById("result").src = url
+
+document.getElementById("status").innerText="Analysis complete"
+
+}
+
+</script>
 
 </body>
+
 </html>
