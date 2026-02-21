@@ -15,12 +15,12 @@ OUTPUT_FOLDER = "outputs"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-device = "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print("Using device:", device)
 
 print("Loading CLIP...")
 
 model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
-
 model.eval()
 
 print("CLIP loaded successfully")
