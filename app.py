@@ -48,7 +48,7 @@ def analyze():
 
 
         # RAM üzerinden oku (disk kullanma)
-        image = Image.open(file.stream).convert("RGB")
+        image = Image.open(file).convert("RGB")
 
         image_input = preprocess(image).unsqueeze(0).to(device)
 
