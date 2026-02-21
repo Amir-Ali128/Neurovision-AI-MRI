@@ -1,124 +1,85 @@
-from flask import Flask, request, jsonify, render_template
 import os
+import torch
+import clip
+from flask import Flask, request, jsonify, render_template
+from PIL import Image
 
+# Flask setup
 app = Flask(__name__)
 
+# Upload folder
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# lazy globals
-detect = None
-encode_image = None
-ActivationExtractor = None
-GradCAM = None
-map_to_brain_region = None
-overlay_on_brain = None
+# Device
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print("Using device:", device)
 
-extractor = None
-gradcam = None
+# Load CLIP model ONCE at startup
+model, preprocess = clip.load("ViT-B/32", device=device)
+model.eval()
 
+print("CLIP loaded successfully")
 
+# Home page
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
+# Analyze route
 @app.route("/analyze", methods=["POST"])
 def analyze():
 
-    global detect, encode_image, ActivationExtractor, GradCAM
-    global map_to_brain_region, overlay_on_brain
-    global extractor, gradcam
-
     try:
 
-        # LAZY IMPORT
-        if detect is None:
+        if "file" not in request.files:
+            return jsonify({"error": "No file uploaded"})
 
-            print("Loading neuro modules...")
-
-            from neuro.yolo import detect as d
-            from neuro.clip_model import encode_image as e
-            from neuro.activation import ActivationExtractor as A
-            from neuro.gradcam import GradCAM as G
-            from neuro.cortex_mapper import map_to_brain_region as M
-            from neuro.brain_overlay import overlay_on_brain as O
-
-            detect = d
-            encode_image = e
-            ActivationExtractor = A
-            GradCAM = G
-            map_to_brain_region = M
-            overlay_on_brain = O
-
-
-        # LAZY MODEL LOAD
-        if extractor is None:
-
-            print("Loading extractor...")
-            extractor = ActivationExtractor()
-
-        if gradcam is None:
-
-            print("Loading gradcam...")
-            gradcam = GradCAM()
-
-
-        file = request.files["image"]
+        file = request.files["file"]
 
         if file.filename == "":
-            return jsonify({"success": False, "error": "No file"})
+            return jsonify({"error": "Empty filename"})
 
+        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
 
-        path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(path)
+        # Save file
+        file.save(filepath)
+        print("Saved:", filepath)
 
+        # Load image safely with PIL
+        image = Image.open(filepath).convert("RGB")
 
-        detections, _ = detect(path)
+        # Preprocess for CLIP
+        image_input = preprocess(image).unsqueeze(0).to(device)
 
-        embedding = encode_image(path)
+        # Run inference
+        with torch.no_grad():
+            image_features = model.encode_image(image_input)
 
-        activations = extractor.run(path)
-
-        heatmap_path = gradcam.generate(path)
-
-
-        mapped = []
-
-        for a in activations:
-
-            mapped.append({
-                "neuron": int(a["neuron"]),
-                "activation": float(a["activation"]),
-                "region": map_to_brain_region(a["neuron"])
-            })
-
-
-        brain_result_path = overlay_on_brain(mapped)
-
+        print("Analysis done")
 
         return jsonify({
-            "success": True,
-            "detections": detections,
-            "embedding": embedding,
-            "activations": mapped,
-            "brain_image": "/" + brain_result_path
+            "status": "success",
+            "message": "Analysis complete"
         })
-
 
     except Exception as e:
 
         print("ERROR:", str(e))
 
         return jsonify({
-            "success": False,
-            "error": str(e)
+            "status": "error",
+            "message": str(e)
         })
 
 
+# Health check
+@app.route("/health")
+def health():
+    return "OK"
+
+
+# Run locally (not used in gunicorn)
 if __name__ == "__main__":
-
-    port = int(os.environ.get("PORT", 10000))
-
-    app.run(host="0.0.0.0", port=port)
-    
+    app.run(host="0.0.0.0", port=5555)
