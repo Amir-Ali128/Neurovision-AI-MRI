@@ -9,8 +9,8 @@ from PIL import Image
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "outputs"
+UPLOAD_FOLDER = "static"
+OUTPUT_FOLDER = "static"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
@@ -30,89 +30,49 @@ print("CLIP loaded successfully")
 def index():
     return render_template("index.html")
 
-
 @app.route("/analyze", methods=["POST"])
 def analyze():
 
     try:
 
+        if "file" not in request.files:
+            return jsonify({"message": "No file uploaded"})
+
         file = request.files["file"]
 
-        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-
-        file.save(filepath)
-
-        image = Image.open(filepath).convert("RGB")
+        image = Image.open(file).convert("RGB")
 
         image_input = preprocess(image).unsqueeze(0).to(device)
 
         with torch.no_grad():
             features = model.encode_image(image_input)
 
-        features = features / features.norm(dim=-1, keepdim=True)
+        features_np = features.cpu().numpy()
 
-        activation = features.cpu().numpy()[0]
+        norm = np.linalg.norm(features_np)
 
-        activation_strength = np.mean(activation)
+        image_np = np.array(image)
 
-        print("Activation:", activation_strength)
+        h, w, _ = image_np.shape
 
-        # LOAD REAL BRAIN TEMPLATE
-        brain = cv2.imread("static/brain_template.png")
+        center = (w//2, h//2)
 
-        h, w, _ = brain.shape
+        cv2.circle(image_np, center, 50, (0,255,0), 3)
 
-        overlay = brain.copy()
+        output_path = "static/output.png"
 
-        # create activation circle
-        center = (
-            int(w * np.random.uniform(0.3, 0.7)),
-            int(h * np.random.uniform(0.3, 0.7))
-        )
+        cv2.imwrite(output_path, cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
 
-        radius = int(activation_strength * 300)
-
-        heat_color = (
-            0,
-            int(activation_strength * 255),
-            255
-        )
-
-        cv2.circle(
-            overlay,
-            center,
-            radius,
-            heat_color,
-            -1
-        )
-
-        result = cv2.addWeighted(
-            brain,
-            0.7,
-            overlay,
-            0.3,
-            0
-        )
-
-        output_path = os.path.join(
-            OUTPUT_FOLDER,
-            file.filename
-        )
-
-        cv2.imwrite(output_path, result)
-
-        return send_file(
-            output_path,
-            mimetype="image/png"
-        )
+        return jsonify({
+            "message": f"Analysis complete | feature_norm={norm:.2f}",
+            "output": "/static/output.png"
+        })
 
     except Exception as e:
 
-        print("ERROR:", str(e))
+        print(e)
 
-        return jsonify({
-            "message": str(e)
-        })
+        return jsonify({"message": str(e)})
 
 
 @app.route("/health")
