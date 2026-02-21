@@ -3,6 +3,8 @@
 <head>
 
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Neurovision AI — MRI Anatomical Brain</title>
 
 <style>
@@ -12,6 +14,7 @@ body{
     color:white;
     text-align:center;
     font-family:Arial;
+    margin-top:40px;
 }
 
 button{
@@ -19,11 +22,19 @@ button{
     font-size:18px;
     margin-top:10px;
     cursor:pointer;
+    background:#00ffcc;
+    border:none;
+    border-radius:5px;
+}
+
+button:hover{
+    background:#00ccaa;
 }
 
 #outputImage{
     margin-top:20px;
     border:2px solid white;
+    display:none;
 }
 
 #status{
@@ -43,7 +54,13 @@ button{
 
 <form id="uploadForm">
 
-<input type="file" id="fileInput" accept="image/*" required>
+<input 
+    type="file" 
+    id="fileInput" 
+    name="file"
+    accept="image/png,image/jpeg,image/jpg"
+    required
+>
 
 <br>
 
@@ -61,54 +78,65 @@ button{
 
 <script>
 
-document.getElementById("uploadForm").onsubmit = async function(e){
+document.getElementById("uploadForm").addEventListener("submit", async function(e){
 
     e.preventDefault()
 
-    let file = document.getElementById("fileInput").files[0]
+    const status = document.getElementById("status")
+    const outputImage = document.getElementById("outputImage")
 
-    if(!file){
+    const fileInput = document.getElementById("fileInput")
 
-        document.getElementById("status").innerText="Select a file first"
+    if(fileInput.files.length === 0){
+
+        status.innerText = "Select a file first"
         return
 
     }
 
-    let formData = new FormData()
+    const file = fileInput.files[0]
 
+    const formData = new FormData()
+
+    // CRITICAL: key must match backend
     formData.append("file", file)
 
-    document.getElementById("status").innerText="Analyzing..."
+    status.innerText = "Analyzing..."
 
     try{
 
-        let response = await fetch("/analyze",{
+        const response = await fetch(
+            window.location.origin + "/analyze",
+            {
+                method: "POST",
+                body: formData
+            }
+        )
 
-            method:"POST",
-            body:formData
+        const result = await response.json()
 
-        })
-
-        let result = await response.json()
-
-        document.getElementById("status").innerText=result.message
+        status.innerText = result.message
 
         if(result.output){
 
-            document.getElementById("outputImage").src =
-                result.output + "?t=" + new Date().getTime()
+            outputImage.src =
+                window.location.origin +
+                result.output +
+                "?t=" +
+                new Date().getTime()
+
+            outputImage.style.display = "block"
 
         }
 
     }
-
     catch(error){
 
-        document.getElementById("status").innerText="Error: "+error
+        status.innerText = "Error: " + error
 
     }
 
-}
+})
 
 </script>
 
