@@ -1,32 +1,43 @@
-<<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="tr">
 <head>
 
-<title>Neurovision AI</title>
+<meta charset="UTF-8">
+<title>Neurovision AI — Anatomical Brain Analysis</title>
 
 <style>
 
-body{
-background:black;
-color:white;
-text-align:center;
-font-family:Arial;
+body {
+    background: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin-top: 40px;
 }
 
-button{
-padding:12px;
-font-size:18px;
-margin-top:10px;
+button {
+    padding: 12px 24px;
+    font-size: 18px;
+    margin-top: 15px;
+    cursor: pointer;
 }
 
-img{
-margin-top:20px;
-max-width:80%;
+img {
+    margin-top: 25px;
+    max-width: 80%;
+    border: 2px solid #444;
 }
 
-#error{
-color:red;
-margin-top:10px;
+#error {
+    color: red;
+    margin-top: 15px;
+    font-size: 16px;
+}
+
+#status {
+    margin-top: 15px;
+    color: #00ffcc;
+    font-size: 18px;
 }
 
 </style>
@@ -37,58 +48,93 @@ margin-top:10px;
 
 <h1>Neurovision AI — MRI Anatomical Brain</h1>
 
-<input type="file" id="file">
+<input type="file" id="file" accept="image/*">
 
 <br>
 
-<button onclick="analyze()">Analyze MRI</button>
+<button id="analyzeBtn" onclick="analyze()">Analyze</button>
 
+<div id="status"></div>
 <div id="error"></div>
 
 <img id="brain">
 
-
 <script>
 
-async function analyze(){
+async function analyze() {
 
-let fileInput = document.getElementById("file");
+    const fileInput = document.getElementById("file");
+    const errorBox = document.getElementById("error");
+    const statusBox = document.getElementById("status");
+    const brainImg = document.getElementById("brain");
+    const button = document.getElementById("analyzeBtn");
 
-if(fileInput.files.length === 0){
+    errorBox.innerText = "";
+    brainImg.src = "";
 
-alert("Select image");
+    if (fileInput.files.length === 0) {
+        errorBox.innerText = "Lütfen bir görüntü seç.";
+        return;
+    }
 
-return;
+    statusBox.innerText = "Analyzing...";
+    button.disabled = true;
 
-}
+    const form = new FormData();
+    form.append("image", fileInput.files[0]);
 
-let form = new FormData();
+    try {
 
-form.append("image", fileInput.files[0]);
+        const controller = new AbortController();
 
-document.getElementById("error").innerText = "Analyzing...";
+        // 120 saniye timeout
+        const timeout = setTimeout(() => {
+            controller.abort();
+        }, 120000);
 
-let res = await fetch("/analyze",{
+        const res = await fetch("/analyze", {
+            method: "POST",
+            body: form,
+            signal: controller.signal
+        });
 
-method:"POST",
+        clearTimeout(timeout);
 
-body:form
+        if (!res.ok) {
+            throw new Error("Server error: " + res.status);
+        }
 
-});
+        const data = await res.json();
 
-let data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || "Analiz başarısız");
+        }
 
-if(!data.success){
+        // cache bypass
+        brainImg.src = data.brain_image + "?t=" + Date.now();
 
-document.getElementById("error").innerText = data.error;
-return;
+        statusBox.innerText = "Analysis complete";
 
-}
+    }
+    catch (err) {
 
-document.getElementById("error").innerText = "";
+        console.error(err);
 
-document.getElementById("brain").src =
-data.brain_image + "?t=" + new Date().getTime();
+        if (err.name === "AbortError") {
+            errorBox.innerText = "Timeout: Analiz çok uzun sürdü.";
+        }
+        else {
+            errorBox.innerText = err.message;
+        }
+
+        statusBox.innerText = "";
+
+    }
+    finally {
+
+        button.disabled = false;
+
+    }
 
 }
 
