@@ -1,142 +1,104 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-
-<meta charset="UTF-8">
-<title>Neurovision AI — Anatomical Brain Analysis</title>
+<title>Neurovision AI</title>
 
 <style>
-
 body {
-    background: #000;
-    color: #fff;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    margin-top: 40px;
+background: black;
+color: white;
+text-align: center;
+font-family: Arial;
 }
 
 button {
-    padding: 12px 24px;
-    font-size: 18px;
-    margin-top: 15px;
-    cursor: pointer;
-}
-
-img {
-    margin-top: 25px;
-    max-width: 80%;
-    border: 2px solid #444;
-}
-
-#error {
-    color: red;
-    margin-top: 15px;
-    font-size: 16px;
+padding: 12px;
+font-size: 16px;
+cursor: pointer;
 }
 
 #status {
-    margin-top: 15px;
-    color: #00ffcc;
-    font-size: 18px;
+margin-top: 20px;
+color: cyan;
 }
 
+#error {
+color: red;
+}
 </style>
 
 </head>
-
 <body>
 
-<h1>Neurovision AI — MRI Anatomical Brain</h1>
+<h2>Neurovision AI — MRI Anatomical Brain</h2>
 
-<input type="file" id="file" accept="image/*">
+<form id="uploadForm" enctype="multipart/form-data">
 
-<br>
+<input type="file" id="fileInput" name="file" accept="image/*">
 
-<button id="analyzeBtn" onclick="analyze()">Analyze</button>
+<br><br>
 
-<div id="status"></div>
-<div id="error"></div>
+<button type="submit">Analyze</button>
 
-<img id="brain">
+</form>
+
+<p id="status"></p>
 
 <script>
 
-async function analyze() {
+document.getElementById("uploadForm").addEventListener("submit", async function(e) {
 
-    const fileInput = document.getElementById("file");
-    const errorBox = document.getElementById("error");
-    const statusBox = document.getElementById("status");
-    const brainImg = document.getElementById("brain");
-    const button = document.getElementById("analyzeBtn");
+e.preventDefault();
 
-    errorBox.innerText = "";
-    brainImg.src = "";
+const status = document.getElementById("status");
 
-    if (fileInput.files.length === 0) {
-        errorBox.innerText = "Lütfen bir görüntü seç.";
-        return;
-    }
+const fileInput = document.getElementById("fileInput");
 
-    statusBox.innerText = "Analyzing...";
-    button.disabled = true;
+if (!fileInput.files.length) {
 
-    const form = new FormData();
-    form.append("image", fileInput.files[0]);
+status.innerHTML = "<span id='error'>Please select an image</span>";
 
-    try {
-
-        const controller = new AbortController();
-
-        // 120 saniye timeout
-        const timeout = setTimeout(() => {
-            controller.abort();
-        }, 120000);
-
-        const res = await fetch("/analyze", {
-            method: "POST",
-            body: form,
-            signal: controller.signal
-        });
-
-        clearTimeout(timeout);
-
-        if (!res.ok) {
-            throw new Error("Server error: " + res.status);
-        }
-
-        const data = await res.json();
-
-        if (!data.success) {
-            throw new Error(data.error || "Analiz başarısız");
-        }
-
-        // cache bypass
-        brainImg.src = data.brain_image + "?t=" + Date.now();
-
-        statusBox.innerText = "Analysis complete";
-
-    }
-    catch (err) {
-
-        console.error(err);
-
-        if (err.name === "AbortError") {
-            errorBox.innerText = "Timeout: Analiz çok uzun sürdü.";
-        }
-        else {
-            errorBox.innerText = err.message;
-        }
-
-        statusBox.innerText = "";
-
-    }
-    finally {
-
-        button.disabled = false;
-
-    }
+return;
 
 }
+
+const file = fileInput.files[0];
+
+const formData = new FormData();
+
+formData.append("file", file);
+
+status.innerText = "Analyzing...";
+
+try {
+
+const response = await fetch("/analyze", {
+
+method: "POST",
+
+body: formData
+
+});
+
+const result = await response.json();
+
+if (result.status === "success") {
+
+status.innerText = "Analysis complete";
+
+} else {
+
+status.innerHTML = "<span id='error'>" + result.message + "</span>";
+
+}
+
+} catch (err) {
+
+status.innerHTML = "<span id='error'>Server connection error</span>";
+
+}
+
+});
 
 </script>
 
