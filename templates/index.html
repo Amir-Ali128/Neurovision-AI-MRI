@@ -1,28 +1,35 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
 
-<title>Neurovision AI</title>
+<meta charset="UTF-8">
+<title>Neurovision AI — MRI Anatomical Brain</title>
 
 <style>
 
 body{
-background:black;
-color:white;
-text-align:center;
-font-family:Arial;
+    background:black;
+    color:white;
+    text-align:center;
+    font-family:Arial;
 }
 
 button{
-padding:12px;
-font-size:18px;
-margin-top:10px;
+    padding:12px;
+    font-size:18px;
+    margin-top:10px;
+    cursor:pointer;
 }
 
-img{
-margin-top:20px;
-max-width:80%;
+#outputImage{
+    margin-top:20px;
+    border:2px solid white;
+}
+
+#status{
+    margin-top:15px;
+    font-size:18px;
+    color:#00ffcc;
 }
 
 </style>
@@ -31,63 +38,80 @@ max-width:80%;
 
 <body>
 
-<h1>Neurovision AI — Anatomical Brain Visualization</h1>
+<h2>Neurovision AI — MRI Anatomical Brain</h2>
+
 
 <form id="uploadForm">
 
-<input type="file" id="fileInput" name="file">
+<input type="file" id="fileInput" accept="image/*" required>
 
-<br><br>
+<br>
 
 <button type="submit">Analyze</button>
 
 </form>
 
+
 <p id="status"></p>
 
-<img id="result">
+
+<img id="outputImage" width="400"/>
+
+
 
 <script>
 
 document.getElementById("uploadForm").onsubmit = async function(e){
 
-e.preventDefault()
+    e.preventDefault()
 
-let file = document.getElementById("fileInput").files[0]
+    let file = document.getElementById("fileInput").files[0]
 
-if(!file){
-document.getElementById("status").innerText="Select image first"
-return
-}
+    if(!file){
 
-let formData = new FormData()
+        document.getElementById("status").innerText="Select a file first"
+        return
 
-formData.append("file", file)
+    }
 
-document.getElementById("status").innerText="Analyzing..."
+    let formData = new FormData()
 
-let response = await fetch("/analyze", {
-method:"POST",
-body:formData
-})
+    formData.append("file", file)
 
-if(!response.ok){
-document.getElementById("status").innerText="Server error"
-return
-}
+    document.getElementById("status").innerText="Analyzing..."
 
-let blob = await response.blob()
+    try{
 
-let url = URL.createObjectURL(blob)
+        let response = await fetch("/analyze",{
 
-document.getElementById("result").src = url
+            method:"POST",
+            body:formData
 
-document.getElementById("status").innerText="Analysis complete"
+        })
+
+        let result = await response.json()
+
+        document.getElementById("status").innerText=result.message
+
+        if(result.output){
+
+            document.getElementById("outputImage").src =
+                result.output + "?t=" + new Date().getTime()
+
+        }
+
+    }
+
+    catch(error){
+
+        document.getElementById("status").innerText="Error: "+error
+
+    }
 
 }
 
 </script>
 
-</body>
 
+</body>
 </html>
