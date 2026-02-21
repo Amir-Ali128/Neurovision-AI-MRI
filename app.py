@@ -7,22 +7,18 @@ import cv2
 from flask import Flask, request, render_template, send_file, jsonify
 from PIL import Image
 
-# Flask setup
 app = Flask(__name__)
 
-# folders
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# IMPORTANT: Render için CPU kullan
 device = "cpu"
 
-print("Loading CLIP model...")
+print("Loading CLIP...")
 
-# jit=False RAM kullanımını düşürür
 model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
 
 model.eval()
@@ -30,81 +26,100 @@ model.eval()
 print("CLIP loaded successfully")
 
 
-# homepage
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-# analyze endpoint
 @app.route("/analyze", methods=["POST"])
 def analyze():
 
     try:
 
-        if "file" not in request.files:
-            return jsonify({"message": "No file uploaded"})
-
         file = request.files["file"]
-
-        if file.filename == "":
-            return jsonify({"message": "Empty filename"})
 
         filepath = os.path.join(UPLOAD_FOLDER, file.filename)
 
         file.save(filepath)
 
-        print("Saved:", filepath)
-
-        # open image
         image = Image.open(filepath).convert("RGB")
 
         image_input = preprocess(image).unsqueeze(0).to(device)
 
-        # CLIP inference
         with torch.no_grad():
             features = model.encode_image(image_input)
 
-        print("CLIP inference done")
-
-        # normalize
         features = features / features.norm(dim=-1, keepdim=True)
 
-        feature_value = features.cpu().numpy()[0][0]
+        activation = features.cpu().numpy()[0]
 
-        print("Feature value:", feature_value)
+        activation_strength = np.mean(activation)
 
-        # visualization
-        original = cv2.imread(filepath)
+        print("Activation:", activation_strength)
 
-        heat = np.ones_like(original) * int(feature_value * 255)
+        # LOAD REAL BRAIN TEMPLATE
+        brain = cv2.imread("static/brain_template.png")
 
-        heatmap = cv2.applyColorMap(heat, cv2.COLORMAP_JET)
+        h, w, _ = brain.shape
 
-        overlay = cv2.addWeighted(original, 0.7, heatmap, 0.3, 0)
+        overlay = brain.copy()
 
-        output_path = os.path.join(OUTPUT_FOLDER, file.filename)
+        # create activation circle
+        center = (
+            int(w * np.random.uniform(0.3, 0.7)),
+            int(h * np.random.uniform(0.3, 0.7))
+        )
 
-        cv2.imwrite(output_path, overlay)
+        radius = int(activation_strength * 300)
 
-        print("Saved visualization:", output_path)
+        heat_color = (
+            0,
+            int(activation_strength * 255),
+            255
+        )
 
-        return send_file(output_path, mimetype="image/jpeg")
+        cv2.circle(
+            overlay,
+            center,
+            radius,
+            heat_color,
+            -1
+        )
+
+        result = cv2.addWeighted(
+            brain,
+            0.7,
+            overlay,
+            0.3,
+            0
+        )
+
+        output_path = os.path.join(
+            OUTPUT_FOLDER,
+            file.filename
+        )
+
+        cv2.imwrite(output_path, result)
+
+        return send_file(
+            output_path,
+            mimetype="image/png"
+        )
 
     except Exception as e:
 
         print("ERROR:", str(e))
 
-        return jsonify({"message": str(e)})
+        return jsonify({
+            "message": str(e)
+        })
 
 
-# health check
 @app.route("/health")
 def health():
     return "OK"
 
 
-# local run
 if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 5555))
