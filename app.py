@@ -6,10 +6,14 @@ import cv2
 import numpy as np
 import torch
 from flask import Flask, jsonify, render_template, request
+from werkzeug.exceptions import RequestEntityTooLarge
 from PIL import Image, UnidentifiedImageError
 
 # Flask
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = int(
+    os.environ.get("MAX_UPLOAD_MB", "15")
+) * 1024 * 1024
 
 # static klasörü garanti olsun
 STATIC_FOLDER = "static"
@@ -70,6 +74,11 @@ def index():
 @app.route("/health")
 def health():
     return "OK"
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_file_too_large(_err):
+    return jsonify({"message": "File too large"}), 413
 
 
 # Readiness check (model loaded)
