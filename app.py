@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 
 from flask import Flask, request, render_template, jsonify
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 # Flask
 app = Flask(__name__)
@@ -18,11 +18,21 @@ os.makedirs(STATIC_FOLDER, exist_ok=True)
 device = "cpu"
 print("Using device:", device)
 
-# Load CLIP once
-print("Loading CLIP...")
-model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
-model.eval()
-print("CLIP loaded successfully")
+# Lazy load CLIP
+_model = None
+_preprocess = None
+
+
+def get_clip_model():
+    global _model, _preprocess
+
+    if _model is None or _preprocess is None:
+        print("Loading CLIP...")
+        _model, _preprocess = clip.load("ViT-B/32", device=device, jit=False)
+        _model.eval()
+        print("CLIP loaded successfully")
+
+    return _model, _preprocess
 
 
 # Home page
@@ -39,17 +49,17 @@ def analyze():
 
         # file kontrol
         if "file" not in request.files:
-            return jsonify({"message": "No file uploaded"})
+            return jsonify({"message": "No file uploaded"}), 400
 
         file = request.files["file"]
 
         if file.filename == "":
-            return jsonify({"message": "Empty filename"})
-
+            return jsonify({"message": "Empty filename"}), 400
 
         # RAM üzerinden oku (disk kullanma)
         image = Image.open(file).convert("RGB")
 
+        model, preprocess = get_clip_model()
         image_input = preprocess(image).unsqueeze(0).to(device)
 
         # CLIP inference
@@ -65,7 +75,7 @@ def analyze():
         h, w, _ = image_np.shape
         center = (w // 2, h // 2)
 
-        cv2.circle(image_np, center, 50, (0,255,0), 3)
+        cv2.circle(image_np, center, 50, (0, 255, 0), 3)
 
         # Save output
         output_path = os.path.join(STATIC_FOLDER, "output.png")
@@ -80,14 +90,15 @@ def analyze():
             "output": "/static/output.png"
         })
 
-
+    except UnidentifiedImageError:
+        return jsonify({"message": "Invalid image file"}), 400
     except Exception as e:
 
         print("ERROR:", e)
 
         return jsonify({
             "message": str(e)
-        })
+        }), 500
 
 
 # Health check
