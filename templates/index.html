@@ -58,7 +58,7 @@ button:hover{
     type="file" 
     id="fileInput" 
     name="file"
-    accept="image/png,image/jpeg,image/jpg"
+    accept="image/*,.dng"
     required
 >
 
@@ -113,7 +113,22 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
             }
         )
 
-        const result = await response.json()
+        let result = null
+
+        try{
+            result = await response.json()
+        }
+        catch(parseError){
+            status.innerText =
+                "Server returned non-JSON response (" + response.status + ")"
+            console.error("Non-JSON response", parseError)
+            return
+        }
+
+        if(!response.ok){
+            status.innerText = result.message || ("Request failed: " + response.status)
+            return
+        }
 
         status.innerText = result.message
 
